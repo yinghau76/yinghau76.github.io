@@ -3,24 +3,30 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://blog.simplypatrick.com/categories/</loc>
-    <lastmod>2021-01-02T18:42:35-08:00</lastmod>
+    <lastmod>2025-11-10T00:00:00-08:00</lastmod>
+  </url><url>
+    <loc>https://blog.simplypatrick.com/posts/</loc>
+    <lastmod>2025-11-10T00:00:00-08:00</lastmod>
+  </url><url>
+    <loc>https://blog.simplypatrick.com/categories/programming/</loc>
+    <lastmod>2025-11-10T00:00:00-08:00</lastmod>
+  </url><url>
+    <loc>https://blog.simplypatrick.com/</loc>
+    <lastmod>2025-11-10T00:00:00-08:00</lastmod>
+  </url><url>
+    <loc>https://blog.simplypatrick.com/tags/</loc>
+    <lastmod>2025-11-10T00:00:00-08:00</lastmod>
+  </url><url>
+    <loc>https://blog.simplypatrick.com/tags/vcs/</loc>
+    <lastmod>2025-11-10T00:00:00-08:00</lastmod>
+  </url><url>
+    <loc>https://blog.simplypatrick.com/posts/2025/11-10-jujutsu/</loc>
+    <lastmod>2025-11-10T00:00:00-08:00</lastmod>
   </url><url>
     <loc>https://blog.simplypatrick.com/tags/jupyter/</loc>
     <lastmod>2021-01-02T18:42:35-08:00</lastmod>
   </url><url>
-    <loc>https://blog.simplypatrick.com/posts/</loc>
-    <lastmod>2021-01-02T18:42:35-08:00</lastmod>
-  </url><url>
-    <loc>https://blog.simplypatrick.com/categories/programming/</loc>
-    <lastmod>2021-01-02T18:42:35-08:00</lastmod>
-  </url><url>
     <loc>https://blog.simplypatrick.com/tags/rust/</loc>
-    <lastmod>2021-01-02T18:42:35-08:00</lastmod>
-  </url><url>
-    <loc>https://blog.simplypatrick.com/</loc>
-    <lastmod>2021-01-02T18:42:35-08:00</lastmod>
-  </url><url>
-    <loc>https://blog.simplypatrick.com/tags/</loc>
     <lastmod>2021-01-02T18:42:35-08:00</lastmod>
   </url><url>
     <loc>https://blog.simplypatrick.com/posts/2021/01-02-rust-jupyter-notebook/</loc>

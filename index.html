@@ -81,7 +81,7 @@
           
             <li><a href="/categories/game">game <span class="badge">3</span></a></li>
           
-            <li><a href="/categories/programming">programming <span class="badge">184</span></a></li>
+            <li><a href="/categories/programming">programming <span class="badge">185</span></a></li>
           
             <li><a href="/categories/web">web <span class="badge">10</span></a></li>
           
@@ -155,6 +155,8 @@
           
             <li><a href="/tags/startup">startup <span class="badge">3</span></a></li>
           
+            <li><a href="/tags/vcs">vcs <span class="badge">1</span></a></li>
+          
             <li><a href="/tags/web">web <span class="badge">2</span></a></li>
           
             <li><a href="/tags/webkit">webkit <span class="badge">3</span></a></li>
@@ -185,6 +187,104 @@
   <div class="row">
     <div class="col-md-9">
       
+      
+                <span class="post-title">
+          <a href="https://blog.simplypatrick.com/posts/2025/11-10-jujutsu/" title="版本控制的「柔術」🥋">
+            <h2>版本控制的「柔術」🥋</h2>
+          </a>
+        </span>
+        <div class="post-meta">
+          <span class="post-date">November 10, 2025</span>
+          
+          <a href="/categories/programming"><span class="label label-info">programming</span></a>
+          
+          
+          <a href="/tags/vcs"><span class="label label-primary">vcs</span></a>
+          
+        </div>
+        <div class="post-content"><blockquote>
+<p><strong>AI 生成聲明：</strong> 本文初稿由 <strong>Gemini AI 2.5 Flash 模型</strong> 生成, 再由個人手動修改而成。</p></blockquote>
+<h1 id="從-git-修訂工具到-jujutsu-的優雅進化">從 Git 修訂工具到 Jujutsu 的優雅進化</h1>
+<p>許多資深開發者都對 <strong>Git</strong> 的強大功能愛恨交織。它強大, 但某些操作（特別是修改歷史和管理一系列依賴的變更時）卻異常複雜, 像是 <code>git rebase -i</code> 這樣的指令既是利器, 也常是困擾的源頭。</p>
+<p>我們將探討一種更優雅、更直覺的版本控制解決方案：<strong>Jujutsu (jj)</strong>。它並不是要取代 Git, 而是作為一個建立在 Git 基礎上的現代化前端, 帶來革命性的工作流程。</p>
+<h2 id="第一階段git-生態系統的修補與嘗試">第一階段：Git 生態系統的修補與嘗試</h2>
+<p>在 <strong>Jujutsu</strong> 誕生之前, 許多工具試圖修補 Git 的「歷史修改」痛點。這些嘗試為 <code>jj</code> 的核心設計奠定了基礎。</p>
+<h3 id="痛點一修訂歷史的麻煩---git-revise-的出現">痛點一：修訂歷史的麻煩 - <strong>git-revise</strong> 的出現</h3>
+<ul>
+<li><strong>問題：</strong> 在 Git 中修改一個比較舊的 commit, 你需要用 <code>git rebase -i</code>, 找到那一行, 將 <code>pick</code> 改成 <code>edit</code>, 修改後再 <code>git commit --amend</code>, 最後 <code>git rebase --continue</code>。過程繁瑣且容易出錯。</li>
+<li><strong>解決方案的萌芽：</strong> 像 <a href="https://github.com/git-revise/git-revise">git-revise</a> 這樣的工具, 讓修訂一個舊 commit 變得更簡單, 通常只需一個指令, 就能自動處理中斷和繼續的步驟。它證明了「<strong>歷史修訂可以更簡單</strong>」的可能性。</li>
+</ul>
+<h3 id="痛點二依賴變更的管理---git-branchstack-的概念">痛點二：依賴變更的管理 - <strong>git-branchstack</strong> 的概念</h3>
+<ul>
+<li><strong>問題：</strong> 當你在一個功能上提交了多個依賴的 commits, 如果底層重構的 commit 需要修改, 後續所有 commits 都需要手動 <code>rebase</code>, 或者面對重複的衝突解決。</li>
+<li><strong>解決方案的探索：</strong> <a href="https://github.com/krobelus/git-branchstack">git-branchstack</a> 等工具, 嘗試建立一個「堆疊式分支」的概念, 讓開發者能更清楚地追蹤和操作一系列相互依賴的變更。這突顯了開發者對「<strong>自動化處理變基</strong>」的渴望。</li>
+</ul>
+<h2 id="第二階段jujutsu-的誕生與核心概念">第二階段：Jujutsu 的誕生與核心概念</h2>
+<p><a href="https://jj-vcs.github.io/jj/latest/">Jujutsu</a> 正是吸收了這些工具的經驗和願景, 將其融入一個全新的版本控制系統介面中。它重新定義了幾個核心概念：</p>
+<h3 id="核心概念一工作區即提交-working-copy-is-a-commit">核心概念一：工作區即提交 (Working Copy is a Commit)</h3>
+<ul>
+<li><strong>告別暫存區 (Staging Area)：</strong> 在 <code>jj</code> 中, 你的工作目錄狀態<strong>永遠</strong>是一個提交（commit）。你對檔案的修改會自動被視為對當前工作提交的修改。
+<ul>
+<li><em>好處：</em> 不再需要 <code>git add</code>, 也沒有 <code>git stash</code> 的概念。</li>
+</ul>
+</li>
+</ul>
+<h3 id="核心概念二不變的變更-id-change-id">核心概念二：不變的「變更 ID」 (Change ID)</h3>
+<ul>
+<li><strong>Git 的問題：</strong> 在 Git 中, 你修改一個舊提交（例如使用 <code>amend</code> 或 <code>rebase</code>）會產生一個全新的 <strong>Commit ID</strong> (SHA-1 hash)。</li>
+<li><strong>Jujutsu 的解決：</strong> <code>jj</code> 為每個邏輯變更（Change）分配一個不變的 <strong>Change ID</strong>。當你修訂一個 commit 時, 它的 <strong>Commit ID</strong> 會改變, 但 <strong>Change ID</strong> 保持不變。
+<ul>
+<li><em>好處：</em> 讓 <code>jj</code> 能夠在底層追蹤變更的演進, 即使歷史被重寫, 邏輯變更仍可追溯。</li>
+</ul>
+</li>
+</ul>
+<h3 id="核心概念三自動安全且強大的變基-automatic-rebasing">核心概念三：自動、安全且強大的變基 (Automatic Rebasing)</h3>
+<ul>
+<li><strong>終結 <code>rebase</code> 的恐懼：</strong> 這是 <code>jj</code> 的殺手鐧。當你修改歷史中的某個提交時, 所有後續依賴於它的提交會<strong>自動且安全地</strong>進行變基。
+<ul>
+<li><em>例如：</em> 你使用 <code>jj edit &lt;old-commit-id&gt;</code> 修改了一個底層提交, 你後續的 commits 會像「柔術」一般優雅地、自動地移到新修訂的提交之上。</li>
+</ul>
+</li>
+</ul>
+<h2 id="第三階段jujutsu-帶來的工作流程變革">第三階段：Jujutsu 帶來的工作流程變革</h2>
+<p><code>jj</code> 的指令設計更直覺、更以「變更」為中心, 極大地簡化了日常操作。</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: left">jj 操作</th>
+          <th style="text-align: left">傳統 Git 工作流</th>
+          <th style="text-align: left">優勢與變革</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: left"><strong><code>jj undo</code></strong></td>
+          <td style="text-align: left">難以實現, 需要 <code>git reflog</code></td>
+          <td style="text-align: left"><strong>一鍵撤銷</strong>：所有操作（包括變基、修訂）都是可撤銷的, <strong>提供了無損的工作安全網</strong>。</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><strong><code>jj squash</code></strong></td>
+          <td style="text-align: left"><code>git rebase -i</code> 或 <code>git commit --amend</code></td>
+          <td style="text-align: left"><strong>輕鬆合併：</strong> 快速將當前工作區的變更併入父提交。</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><strong><code>jj split</code></strong></td>
+          <td style="text-align: left"><code>git rebase -i</code> + 手動操作</td>
+          <td style="text-align: left"><strong>輕鬆拆分：</strong> 在不修改原提交的前提下, 將其部分內容拆分為新提交。</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><strong><code>jj log</code></strong></td>
+          <td style="text-align: left"><code>git log --graph</code></td>
+          <td style="text-align: left"><strong>清晰日誌：</strong> 預設輸出更易讀的變更圖, 並顯示 Change ID。</td>
+      </tr>
+  </tbody>
+</table>
+<h2 id="結語版本控制的未來已來">結語：版本控制的未來已來</h2>
+<p><strong>Jujutsu</strong> 將版本控制的複雜性抽象化, 提供了更直覺、更安全、更符合人腦思考邏輯的操作介面。它將我們從 git-revise 和 git-branchstack 試圖解決的局部痛點中解放出來, 提供了一個更全面、優雅的解決方案。</p>
+<p>如果你厭倦了 Git 繁瑣的歷史修改流程, 渴望更流暢、更少出錯的開發體驗, 那麼是時候擁抱這門版本控制的「柔術」了。</p>
+</div>
+
+        <hr/>
       
                 <span class="post-title">
           <a href="https://blog.simplypatrick.com/posts/2021/01-02-rust-jupyter-notebook/" title="建置 Jupyter Notebook 的 Rust 運作環境">
@@ -532,7 +632,21 @@ y = x^2
           
           
         </div>
-        <div class="post-content"><p>工作上常需要看 log 解決問題，推薦一個好用的工具 <a href="https://github.com/variar/klogg">klogg</a>:</p>
+        <div class="post-content"><p>工作上常需要看 log 解決問題，推薦一個好用的工具 <a href="https://github.com/variar/klogg">klogg</a>，它是一個開源、跨平台、速度飛快的 log 檢視器。</p>
+<p>klogg 是 glogg 的分支，它有以下這些特色：</p>
+<ul>
+<li>開源、跨平台的 GUI 應用程式</li>
+<li>速度快，可以處理大型 log 檔案</li>
+<li>使用正規表示式進行搜尋</li>
+<li>支援 Windows, macOS and Linux 三大作業系統</li>
+<li>支援 Perl 相容的正規表示式</li>
+<li>log 和搜尋結果都有語法高亮</li>
+<li>即時監控檔案變化</li>
+<li>為現代 CPU 進行了最佳化</li>
+<li>提供可攜式版本</li>
+<li>自動偵測文字編碼</li>
+<li>進階的文字高亮規則</li>
+</ul>
 <img src='/posts/2019/12-25-klogg/klogg.png' width="100%"></div>
 
         <hr/>
@@ -662,38 +776,6 @@ y = x^2
 
         <hr/>
       
-                <span class="post-title">
-          <a href="https://blog.simplypatrick.com/posts/2019/04-08-learning-rust/" title="Learning Rust">
-            <h2>Learning Rust</h2>
-          </a>
-        </span>
-        <div class="post-meta">
-          <span class="post-date">April 8, 2019</span>
-          
-          <a href="/categories/programming"><span class="label label-info">programming</span></a>
-          
-          
-          <a href="/tags/rust"><span class="label label-primary">rust</span></a>
-          
-        </div>
-        <div class="post-content"><h2 id="關於-rust">關於 Rust</h2>
-<p>會知道 Rust 是因為之前公司團隊的工作是跟瀏覽器引擎 (Webkit/Blink) 的優化有關，那時只知道 Mozilla 正在用 Rust 這個新的程式語言實驗性地開發 Servo 引擎。同時間 Go 已經到達 1.0 的里程碑，同時有著優異的編譯及執行效能，很快地 Go 就變成我個人主要使用的程式語言，工作上需要的一些小工具也都是用 Go 來實現。</p>
-<p>開始對 Rust 重新關注大概是它在 2015 年釋放 1.0 版本後，那時只稍微了解一下語法及主要的語言特性，當時覺得這程式語言的學習曲線蠻陡峭的，必須全面地對所有的語言特性有一定了解後才能駕馭它。那時 Go 用的正是順手，所以就沒什麼動力把 Rust 完整學起來。</p>
-<p>去年開始工作上需要了解 Fuchsia OS 的實作，赫然發現裡面蠻多系統服務都是用 Rust 開發的，數量上甚至比 Google 自家的 Go 還多，這也是我決定多投入時間學習 Rust 的轉捩點。</p>
-<h2 id="學習資源">學習資源</h2>
-<p>我主要使用下列幾本書來學習 Rust：</p>
-<ul>
-<li><a href="https://www.amazon.cn/dp/B07GSRFG28">深入浅出 Rust</a> 這本書的電子版: 它的特色是側重於解釋 Rust 主要概念的設計思想，而不只是單純語法或用法的說明；且因為是中文的緣故，讀起來速度還是比較快，比較像是 Rust 的內功心法入門。</li>
-<li><a href="https://ithelp.ithome.com.tw/users/20111802/ironman/1742">30 天深入淺出 Rust 系列</a> 則是以淺顯易懂的範例把 Rust 主要的特色講解了一遍，內容適合對於想要快速地對 Rust 有個全面性的概觀的人。</li>
-<li>對 Rust 有了基本的了解後，<a href="https://stevedonovan.github.io/rust-gentle-intro/readme.html#a-gentle-introduction-to-rust">A Gentle Introduction to Rust</a> 則是適合有 C/C++ 經驗的開發者來學習如何寫 idiomatic Rust。</li>
-</ul>
-<p>至於最經典的 <a href="https://doc.rust-lang.org/book/">The Rust Programming Language</a> 呢? 我只把了一些我覺得重要的章節看完，其他剩下的就直接動手實作，遇到有細節不清楚或是已經忘記時再花時間來看。</p>
-<h2 id="其他資源">其他資源</h2>
-<p>上面主要是比較完整的 Rust 學習資源，下一篇再分享一些我覺得不錯的 blog post，通常是針對某個特定主題或進階功能的解釋或教學。</p>
-</div>
-
-        <hr/>
-      
     </div>
     <div class="col-md-3 sidebar">
       <aside>
@@ -703,6 +785,8 @@ y = x^2
   </section>
   <section>
   <ul class="list-group">
+  
+    <li class="list-group-item"><a href="https://blog.simplypatrick.com/posts/2025/11-10-jujutsu/">版本控制的「柔術」🥋</a></li>
   
     <li class="list-group-item"><a href="https://blog.simplypatrick.com/posts/2021/01-02-rust-jupyter-notebook/">建置 Jupyter Notebook 的 Rust 運作環境</a></li>
   
@@ -721,8 +805,6 @@ y = x^2
     <li class="list-group-item"><a href="https://blog.simplypatrick.com/posts/2018/02-14-kotlin-coroutines-and-threads/">Kotlin Coroutines and Threads</a></li>
   
     <li class="list-group-item"><a href="https://blog.simplypatrick.com/posts/2018/02-13-kotlin-coroutines-api/">Kotlin Coroutine API</a></li>
-  
-    <li class="list-group-item"><a href="https://blog.simplypatrick.com/posts/2018/01-22-devdocs-desktop/">Devdocs Desktop</a></li>
   
   </ul>
 </section>

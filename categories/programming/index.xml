@@ -4,7 +4,96 @@
     <link>https://blog.simplypatrick.com/categories/programming/</link>
     <author>Patrick Tsai</author>
     <rights>Copyright (c) 2003 - 2016, Patrick Tsai; all rights reserved.</rights>
-    <updated>2021-01-02 18:42:35 -0800 PST</updated>
+    <updated>2025-11-10 00:00:00 -0800 PST</updated>
+    
+    <item>
+      <title>版本控制的「柔術」🥋</title>
+      <link>https://blog.simplypatrick.com/posts/2025/11-10-jujutsu/</link>
+      <pubDate>Mon, 10 Nov 2025 00:00:00 PST</pubDate>
+      <author>Patrick Tsai</author>
+      <guid>https://blog.simplypatrick.com/posts/2025/11-10-jujutsu/</guid>
+      <description>&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;AI 生成聲明：&lt;/strong&gt; 本文初稿由 &lt;strong&gt;Gemini AI 2.5 Flash 模型&lt;/strong&gt; 生成, 再由個人手動修改而成。&lt;/p&gt;&lt;/blockquote&gt;
+&lt;h1 id=&#34;從-git-修訂工具到-jujutsu-的優雅進化&#34;&gt;從 Git 修訂工具到 Jujutsu 的優雅進化&lt;/h1&gt;
+&lt;p&gt;許多資深開發者都對 &lt;strong&gt;Git&lt;/strong&gt; 的強大功能愛恨交織。它強大, 但某些操作（特別是修改歷史和管理一系列依賴的變更時）卻異常複雜, 像是 &lt;code&gt;git rebase -i&lt;/code&gt; 這樣的指令既是利器, 也常是困擾的源頭。&lt;/p&gt;
+&lt;p&gt;我們將探討一種更優雅、更直覺的版本控制解決方案：&lt;strong&gt;Jujutsu (jj)&lt;/strong&gt;。它並不是要取代 Git, 而是作為一個建立在 Git 基礎上的現代化前端, 帶來革命性的工作流程。&lt;/p&gt;
+&lt;h2 id=&#34;第一階段git-生態系統的修補與嘗試&#34;&gt;第一階段：Git 生態系統的修補與嘗試&lt;/h2&gt;
+&lt;p&gt;在 &lt;strong&gt;Jujutsu&lt;/strong&gt; 誕生之前, 許多工具試圖修補 Git 的「歷史修改」痛點。這些嘗試為 &lt;code&gt;jj&lt;/code&gt; 的核心設計奠定了基礎。&lt;/p&gt;
+&lt;h3 id=&#34;痛點一修訂歷史的麻煩---git-revise-的出現&#34;&gt;痛點一：修訂歷史的麻煩 - &lt;strong&gt;git-revise&lt;/strong&gt; 的出現&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;問題：&lt;/strong&gt; 在 Git 中修改一個比較舊的 commit, 你需要用 &lt;code&gt;git rebase -i&lt;/code&gt;, 找到那一行, 將 &lt;code&gt;pick&lt;/code&gt; 改成 &lt;code&gt;edit&lt;/code&gt;, 修改後再 &lt;code&gt;git commit --amend&lt;/code&gt;, 最後 &lt;code&gt;git rebase --continue&lt;/code&gt;。過程繁瑣且容易出錯。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;解決方案的萌芽：&lt;/strong&gt; 像 &lt;a href=&#34;https://github.com/git-revise/git-revise&#34;&gt;git-revise&lt;/a&gt; 這樣的工具, 讓修訂一個舊 commit 變得更簡單, 通常只需一個指令, 就能自動處理中斷和繼續的步驟。它證明了「&lt;strong&gt;歷史修訂可以更簡單&lt;/strong&gt;」的可能性。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;痛點二依賴變更的管理---git-branchstack-的概念&#34;&gt;痛點二：依賴變更的管理 - &lt;strong&gt;git-branchstack&lt;/strong&gt; 的概念&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;問題：&lt;/strong&gt; 當你在一個功能上提交了多個依賴的 commits, 如果底層重構的 commit 需要修改, 後續所有 commits 都需要手動 &lt;code&gt;rebase&lt;/code&gt;, 或者面對重複的衝突解決。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;解決方案的探索：&lt;/strong&gt; &lt;a href=&#34;https://github.com/krobelus/git-branchstack&#34;&gt;git-branchstack&lt;/a&gt; 等工具, 嘗試建立一個「堆疊式分支」的概念, 讓開發者能更清楚地追蹤和操作一系列相互依賴的變更。這突顯了開發者對「&lt;strong&gt;自動化處理變基&lt;/strong&gt;」的渴望。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;第二階段jujutsu-的誕生與核心概念&#34;&gt;第二階段：Jujutsu 的誕生與核心概念&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&#34;https://jj-vcs.github.io/jj/latest/&#34;&gt;Jujutsu&lt;/a&gt; 正是吸收了這些工具的經驗和願景, 將其融入一個全新的版本控制系統介面中。它重新定義了幾個核心概念：&lt;/p&gt;
+&lt;h3 id=&#34;核心概念一工作區即提交-working-copy-is-a-commit&#34;&gt;核心概念一：工作區即提交 (Working Copy is a Commit)&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;告別暫存區 (Staging Area)：&lt;/strong&gt; 在 &lt;code&gt;jj&lt;/code&gt; 中, 你的工作目錄狀態&lt;strong&gt;永遠&lt;/strong&gt;是一個提交（commit）。你對檔案的修改會自動被視為對當前工作提交的修改。
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;好處：&lt;/em&gt; 不再需要 &lt;code&gt;git add&lt;/code&gt;, 也沒有 &lt;code&gt;git stash&lt;/code&gt; 的概念。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;核心概念二不變的變更-id-change-id&#34;&gt;核心概念二：不變的「變更 ID」 (Change ID)&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Git 的問題：&lt;/strong&gt; 在 Git 中, 你修改一個舊提交（例如使用 &lt;code&gt;amend&lt;/code&gt; 或 &lt;code&gt;rebase&lt;/code&gt;）會產生一個全新的 &lt;strong&gt;Commit ID&lt;/strong&gt; (SHA-1 hash)。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Jujutsu 的解決：&lt;/strong&gt; &lt;code&gt;jj&lt;/code&gt; 為每個邏輯變更（Change）分配一個不變的 &lt;strong&gt;Change ID&lt;/strong&gt;。當你修訂一個 commit 時, 它的 &lt;strong&gt;Commit ID&lt;/strong&gt; 會改變, 但 &lt;strong&gt;Change ID&lt;/strong&gt; 保持不變。
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;好處：&lt;/em&gt; 讓 &lt;code&gt;jj&lt;/code&gt; 能夠在底層追蹤變更的演進, 即使歷史被重寫, 邏輯變更仍可追溯。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;核心概念三自動安全且強大的變基-automatic-rebasing&#34;&gt;核心概念三：自動、安全且強大的變基 (Automatic Rebasing)&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;終結 &lt;code&gt;rebase&lt;/code&gt; 的恐懼：&lt;/strong&gt; 這是 &lt;code&gt;jj&lt;/code&gt; 的殺手鐧。當你修改歷史中的某個提交時, 所有後續依賴於它的提交會&lt;strong&gt;自動且安全地&lt;/strong&gt;進行變基。
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;例如：&lt;/em&gt; 你使用 &lt;code&gt;jj edit &amp;lt;old-commit-id&amp;gt;&lt;/code&gt; 修改了一個底層提交, 你後續的 commits 會像「柔術」一般優雅地、自動地移到新修訂的提交之上。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&#34;第三階段jujutsu-帶來的工作流程變革&#34;&gt;第三階段：Jujutsu 帶來的工作流程變革&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;jj&lt;/code&gt; 的指令設計更直覺、更以「變更」為中心, 極大地簡化了日常操作。&lt;/p&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+      &lt;tr&gt;
+          &lt;th style=&#34;text-align: left&#34;&gt;jj 操作&lt;/th&gt;
+          &lt;th style=&#34;text-align: left&#34;&gt;傳統 Git 工作流&lt;/th&gt;
+          &lt;th style=&#34;text-align: left&#34;&gt;優勢與變革&lt;/th&gt;
+      &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+      &lt;tr&gt;
+          &lt;td style=&#34;text-align: left&#34;&gt;&lt;strong&gt;&lt;code&gt;jj undo&lt;/code&gt;&lt;/strong&gt;&lt;/td&gt;
+          &lt;td style=&#34;text-align: left&#34;&gt;難以實現, 需要 &lt;code&gt;git reflog&lt;/code&gt;&lt;/td&gt;
+          &lt;td style=&#34;text-align: left&#34;&gt;&lt;strong&gt;一鍵撤銷&lt;/strong&gt;：所有操作（包括變基、修訂）都是可撤銷的, &lt;strong&gt;提供了無損的工作安全網&lt;/strong&gt;。&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td style=&#34;text-align: left&#34;&gt;&lt;strong&gt;&lt;code&gt;jj squash&lt;/code&gt;&lt;/strong&gt;&lt;/td&gt;
+          &lt;td style=&#34;text-align: left&#34;&gt;&lt;code&gt;git rebase -i&lt;/code&gt; 或 &lt;code&gt;git commit --amend&lt;/code&gt;&lt;/td&gt;
+          &lt;td style=&#34;text-align: left&#34;&gt;&lt;strong&gt;輕鬆合併：&lt;/strong&gt; 快速將當前工作區的變更併入父提交。&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td style=&#34;text-align: left&#34;&gt;&lt;strong&gt;&lt;code&gt;jj split&lt;/code&gt;&lt;/strong&gt;&lt;/td&gt;
+          &lt;td style=&#34;text-align: left&#34;&gt;&lt;code&gt;git rebase -i&lt;/code&gt; + 手動操作&lt;/td&gt;
+          &lt;td style=&#34;text-align: left&#34;&gt;&lt;strong&gt;輕鬆拆分：&lt;/strong&gt; 在不修改原提交的前提下, 將其部分內容拆分為新提交。&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td style=&#34;text-align: left&#34;&gt;&lt;strong&gt;&lt;code&gt;jj log&lt;/code&gt;&lt;/strong&gt;&lt;/td&gt;
+          &lt;td style=&#34;text-align: left&#34;&gt;&lt;code&gt;git log --graph&lt;/code&gt;&lt;/td&gt;
+          &lt;td style=&#34;text-align: left&#34;&gt;&lt;strong&gt;清晰日誌：&lt;/strong&gt; 預設輸出更易讀的變更圖, 並顯示 Change ID。&lt;/td&gt;
+      &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id=&#34;結語版本控制的未來已來&#34;&gt;結語：版本控制的未來已來&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;Jujutsu&lt;/strong&gt; 將版本控制的複雜性抽象化, 提供了更直覺、更安全、更符合人腦思考邏輯的操作介面。它將我們從 git-revise 和 git-branchstack 試圖解決的局部痛點中解放出來, 提供了一個更全面、優雅的解決方案。&lt;/p&gt;
+&lt;p&gt;如果你厭倦了 Git 繁瑣的歷史修改流程, 渴望更流暢、更少出錯的開發體驗, 那麼是時候擁抱這門版本控制的「柔術」了。&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>建置 Jupyter Notebook 的 Rust 運作環境</title>
@@ -335,7 +424,21 @@ y = x^2
       <pubDate>Wed, 25 Dec 2019 00:00:00 UTC</pubDate>
       <author>Patrick Tsai</author>
       <guid>https://blog.simplypatrick.com/posts/2019/12-25-klogg/</guid>
-      <description>&lt;p&gt;工作上常需要看 log 解決問題，推薦一個好用的工具 &lt;a href=&#34;https://github.com/variar/klogg&#34;&gt;klogg&lt;/a&gt;:&lt;/p&gt;
+      <description>&lt;p&gt;工作上常需要看 log 解決問題，推薦一個好用的工具 &lt;a href=&#34;https://github.com/variar/klogg&#34;&gt;klogg&lt;/a&gt;，它是一個開源、跨平台、速度飛快的 log 檢視器。&lt;/p&gt;
+&lt;p&gt;klogg 是 glogg 的分支，它有以下這些特色：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;開源、跨平台的 GUI 應用程式&lt;/li&gt;
+&lt;li&gt;速度快，可以處理大型 log 檔案&lt;/li&gt;
+&lt;li&gt;使用正規表示式進行搜尋&lt;/li&gt;
+&lt;li&gt;支援 Windows, macOS and Linux 三大作業系統&lt;/li&gt;
+&lt;li&gt;支援 Perl 相容的正規表示式&lt;/li&gt;
+&lt;li&gt;log 和搜尋結果都有語法高亮&lt;/li&gt;
+&lt;li&gt;即時監控檔案變化&lt;/li&gt;
+&lt;li&gt;為現代 CPU 進行了最佳化&lt;/li&gt;
+&lt;li&gt;提供可攜式版本&lt;/li&gt;
+&lt;li&gt;自動偵測文字編碼&lt;/li&gt;
+&lt;li&gt;進階的文字高亮規則&lt;/li&gt;
+&lt;/ul&gt;
 &lt;img src=&#39;https://blog.simplypatrick.com/posts/2019/12-25-klogg/klogg.png&#39; width=&#34;100%&#34;&gt;</description>
     </item>
     
