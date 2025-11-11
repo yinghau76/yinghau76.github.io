@@ -4,7 +4,334 @@
     <link>https://blog.simplypatrick.com/categories/programming/</link>
     <author>Patrick Tsai</author>
     <rights>Copyright (c) 2003 - 2016, Patrick Tsai; all rights reserved.</rights>
-    <updated>2025-11-10 00:00:00 -0800 PST</updated>
+    <updated>2025-11-11 02:58:58 -0800 PST</updated>
+    
+    <item>
+      <title>版本控制的個人效率追尋：從 git-revise、git-branchstack 到 Jujutsu</title>
+      <link>https://blog.simplypatrick.com/posts/2025/11-11-jujutsu/</link>
+      <pubDate>Tue, 11 Nov 2025 02:58:58 PST</pubDate>
+      <author>Patrick Tsai</author>
+      <guid>https://blog.simplypatrick.com/posts/2025/11-11-jujutsu/</guid>
+      <description>&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;AI 生成聲明：&lt;/strong&gt; 本文初稿由 &lt;strong&gt;Claude AI Sonnect 4.5 模型&lt;/strong&gt; 生成, 再由個人手動修改而成。&lt;/p&gt;&lt;/blockquote&gt;
+&lt;h2 id=&#34;前言git-工作流的痛點&#34;&gt;前言：Git 工作流的痛點&lt;/h2&gt;
+&lt;p&gt;當我們使用 Git 進行開發時, 經常會遇到這些情況:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;想修改歷史 commit, 需要用 &lt;code&gt;git rebase -i&lt;/code&gt; 進入互動模式&lt;/li&gt;
+&lt;li&gt;管理多個相關的 feature branches, 需要手動追蹤分支間的依賴關係&lt;/li&gt;
+&lt;li&gt;不小心改錯了想回到之前的狀態, 得靠 &lt;code&gt;git reflog&lt;/code&gt; 救援&lt;/li&gt;
+&lt;li&gt;Commit 之後才發現忘記加檔案, 又要 &lt;code&gt;git commit --amend&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;這些操作雖然強大, 但往往需要記住複雜的命令組合, 對新手不友善。更重要的是, 它們打斷了開發者的思考流程, 讓人把注意力從「解決問題」轉移到「操作工具」。&lt;/p&gt;
+&lt;p&gt;對於追求高效工作流的開發者來說, 這些摩擦累積起來是不可忽視的時間成本。於是, 一些人開始探索更符合自己工作習慣的版本控制方式&amp;hellip;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;第一步git-revise--簡化歷史編輯&#34;&gt;第一步：git-revise — 簡化歷史編輯&lt;/h2&gt;
+&lt;h3 id=&#34;誕生背景&#34;&gt;誕生背景&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;git-revise&lt;/code&gt; 是為了解決 &lt;code&gt;git rebase -i&lt;/code&gt; 的複雜性而生。對於經常需要修改 commit 歷史的開發者來說, 互動式 rebase 的流程實在太繁瑣了。git-revise 提供了更直接的方式來達成同樣的目標。&lt;/p&gt;
+&lt;h3 id=&#34;核心特點&#34;&gt;核心特點&lt;/h3&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 傳統 git rebase 的方式&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git rebase -i HEAD~3  &lt;span style=&#34;color:#75715e&#34;&gt;# 進入編輯器, 標記 edit/reword/squash...&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# git-revise 的方式&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 1. 先修改檔案&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vim some_file.py
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 2. Stage 你的修改&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git add some_file.py
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 3. 應用到目標 commit&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git revise &amp;lt;commit-hash&amp;gt;  &lt;span style=&#34;color:#75715e&#34;&gt;# 將 staged changes 應用到該 commit&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;優勢&#34;&gt;優勢&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;更安全&lt;/strong&gt;: 自動保留原始狀態,隨時可以恢復&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;更直覺&lt;/strong&gt;: 直接操作目標 commit,不需要互動式編輯器&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;避免衝突&lt;/strong&gt;: 智能處理 commit 間的依賴關係&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;限制&#34;&gt;限制&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;仍然基於 Git 的 branch 模型&lt;/li&gt;
+&lt;li&gt;無法徹底解決多分支管理的複雜性&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;第二步git-branchstack--branchless-工作流的個人實踐&#34;&gt;第二步：git-branchstack — Branchless 工作流的個人實踐&lt;/h2&gt;
+&lt;h3 id=&#34;為什麼需要它&#34;&gt;為什麼需要它？&lt;/h3&gt;
+&lt;p&gt;許多開發者發現, 傳統的「一個 feature 一個 branch」模式在實際工作中很不順手:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;每次切換 branch 都要重新 build&lt;/li&gt;
+&lt;li&gt;多個相關的 PR 需要手動維護依賴關係&lt;/li&gt;
+&lt;li&gt;在不同 branch 間來回跳轉打斷思緒&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;git-branchstack 是一個個人效率工具, 讓你能用更自然的方式工作: 所有開發都在一個 branch 上進行, 只在需要提交 PR 時才生成對應的分支。&lt;/p&gt;
+&lt;h3 id=&#34;問題場景&#34;&gt;問題場景&lt;/h3&gt;
+&lt;p&gt;你想在&lt;strong&gt;單一分支&lt;/strong&gt;上開發多個功能, 每個功能對應一個 PR:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;功能 A: 重構 authentication&lt;/li&gt;
+&lt;li&gt;功能 B: 新增 profile 頁面 (依賴 A)&lt;/li&gt;
+&lt;li&gt;功能 C: 一個無關的 bugfix&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;傳統做法需要:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;為每個功能建立獨立分支&lt;/li&gt;
+&lt;li&gt;在分支間來回切換&lt;/li&gt;
+&lt;li&gt;每次切換都重新 build, 浪費時間&lt;/li&gt;
+&lt;li&gt;手動管理分支間的依賴關係&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&#34;git-branchstack-的創新解法&#34;&gt;git-branchstack 的創新解法&lt;/h3&gt;
+&lt;p&gt;git-branchstack 讓你&lt;strong&gt;留在本地分支&lt;/strong&gt;, 用 commit message 的標籤來標記主題:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 在本地分支上正常開發&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git commit -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;[auth-refactor] Update login logic&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git commit -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;[auth-refactor] Add JWT support&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git commit -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;[profile-page:auth-refactor] Add profile component&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git commit -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;[bugfix-123] Fix memory leak&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 一行命令生成所有分支&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git branchstack
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;這會自動生成:&lt;/p&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;* local-branch (HEAD)
+|   - [bugfix-123] Fix memory leak
+|   - [profile-page:auth-refactor] Add profile component  
+|   - [auth-refactor] Add JWT support
+|   - [auth-refactor] Update login logic
+|
+|-- bugfix-123 (branch)
+|     - Fix memory leak
+|
+|-- profile-page (branch)
+|     - Add profile component
+|     (based on auth-refactor)
+|
+|-- auth-refactor (branch)
+      - Add JWT support
+      - Update login logic
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&#34;核心概念&#34;&gt;核心概念&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;標籤語法&lt;/strong&gt;: &lt;code&gt;[topic]&lt;/code&gt; 或 &lt;code&gt;[topic:dependency]&lt;/code&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;[auth-refactor]&lt;/code&gt; - 獨立主題&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;[profile:auth-refactor]&lt;/code&gt; - profile 依賴 auth-refactor&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Branchless 開發體驗&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;所有工作在一個分支上進行&lt;/li&gt;
+&lt;li&gt;不需要切換分支, build 不會失效&lt;/li&gt;
+&lt;li&gt;修改任何 commit 後, 重跑 &lt;code&gt;git branchstack&lt;/code&gt; 更新所有分支&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;利用 git-revise&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;底層使用 git-revise, 不碰工作目錄&lt;/li&gt;
+&lt;li&gt;速度快, 不影響正在進行的工作&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&#34;實際工作流&#34;&gt;實際工作流&lt;/h3&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 1. 開發階段 - 在本地分支上自由開發&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git commit -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;[feature-A] Implement part 1&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git commit -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;[feature-A] Implement part 2&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git commit -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;[feature-B:feature-A] Build on A&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 2. 需要修改之前的 commit&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git revise --interactive --edit  &lt;span style=&#34;color:#75715e&#34;&gt;# 編輯 commit message 加標籤&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git revise &amp;lt;commit-hash&amp;gt;          &lt;span style=&#34;color:#75715e&#34;&gt;# 或直接修改內容&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 3. 生成/更新分支用於 PR&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git branchstack
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 4. 推送到 GitHub&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git push origin feature-A
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git push origin feature-B
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;優勢與限制&#34;&gt;優勢與限制&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;優勢&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;真正的 branchless 體驗, 留在本地分支工作&lt;/li&gt;
+&lt;li&gt;自動處理依賴關係&lt;/li&gt;
+&lt;li&gt;支援 git rerere 記住衝突解決方案&lt;/li&gt;
+&lt;li&gt;永不修改工作目錄, 不影響 build&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;限制&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;需要在 commit message 中手動標記主題&lt;/li&gt;
+&lt;li&gt;依賴關係的改變需要修改 commit message&lt;/li&gt;
+&lt;li&gt;作者本人已轉向 Jujutsu (這說明了一些問題!)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;革命性轉變jujutsu-jj--重新定義個人版本控制體驗&#34;&gt;革命性轉變：Jujutsu (jj) — 重新定義個人版本控制體驗&lt;/h2&gt;
+&lt;h3 id=&#34;為什麼誕生&#34;&gt;為什麼誕生？&lt;/h3&gt;
+&lt;p&gt;即使有了 git-revise 和 git-branchstack 這些工具, Git 的基礎模型仍然存在根本性的摩擦。Jujutsu 的作者 Martin von Zweigbergk (同時也是 Google 內部版本控制系統的開發者) 決定: 與其不斷在 Git 上打補丁, 不如從頭設計一個真正符合現代工作流的版本控制系統。&lt;/p&gt;
+&lt;p&gt;這不是為了取代 Git 成為「標準」, 而是為追求極致效率的個人開發者提供更好的選擇。&lt;/p&gt;
+&lt;h3 id=&#34;核心理念轉變&#34;&gt;核心理念轉變&lt;/h3&gt;
+&lt;p&gt;Jujutsu 不是在 Git 上加工具, 而是&lt;strong&gt;重新思考版本控制該是什麼樣子&lt;/strong&gt;:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Change-based, 而非 Commit-based&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;每個修改都是一個獨立的 &amp;ldquo;change&amp;rdquo;&lt;/li&gt;
+&lt;li&gt;Change 可以隨時修改, 不需要 amend 或 rebase&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Working Copy 即 Commit&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;你的工作目錄就是一個 commit&lt;/li&gt;
+&lt;li&gt;不需要 &lt;code&gt;git add&lt;/code&gt; + &lt;code&gt;git commit&lt;/code&gt; 兩階段&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;真正的非線性歷史&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;不需要 branch 也能管理多條開發線&lt;/li&gt;
+&lt;li&gt;衝突作為一等公民存在於歷史中&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&#34;實際操作對比&#34;&gt;實際操作對比&lt;/h3&gt;
+&lt;h4 id=&#34;場景一修改歷史-commit&#34;&gt;場景一：修改歷史 Commit&lt;/h4&gt;
+&lt;p&gt;&lt;strong&gt;Git 方式:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git rebase -i HEAD~3
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 標記要修改的 commit 為 &amp;#39;edit&amp;#39;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 進行修改&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git add .
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git commit --amend
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git rebase --continue
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;git-revise 方式:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 進行修改&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;vim some_file.py
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Stage 修改&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git add some_file.py
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 應用到目標 commit&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git revise &amp;lt;commit-hash&amp;gt;  &lt;span style=&#34;color:#75715e&#34;&gt;# 直接更新該 commit&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;Jujutsu 方式:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj edit &amp;lt;change-id&amp;gt;  &lt;span style=&#34;color:#75715e&#34;&gt;# 直接切換到該 change&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 進行修改&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj commit -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;updated&amp;#34;&lt;/span&gt;  &lt;span style=&#34;color:#75715e&#34;&gt;# 自動更新該 change&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;場景二管理多個功能開發&#34;&gt;場景二：管理多個功能開發&lt;/h4&gt;
+&lt;p&gt;&lt;strong&gt;Git + branchstack 方式:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git checkout -b feature-A
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 開發 feature-A&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git commit -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;A&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git checkout -b feature-B
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 開發 feature-B&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git commit -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;B&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 要修改 A 時&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git checkout feature-A
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 修改&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;git branchstack restack
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;Jujutsu 方式:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 不需要建立 branch&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj new -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;feature A&amp;#34;&lt;/span&gt;  &lt;span style=&#34;color:#75715e&#34;&gt;# 創建新 change&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 開發 feature A&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj new -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;feature B&amp;#34;&lt;/span&gt;  &lt;span style=&#34;color:#75715e&#34;&gt;# 基於當前創建新 change&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 開發 feature B&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 要修改 A 時&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj edit &amp;lt;change-A-id&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 修改完自動處理依賴&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;jujutsu-的核心特性&#34;&gt;Jujutsu 的核心特性&lt;/h3&gt;
+&lt;h4 id=&#34;1-自動追蹤所有歷史&#34;&gt;1. 自動追蹤所有歷史&lt;/h4&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj op log  &lt;span style=&#34;color:#75715e&#34;&gt;# 查看所有操作歷史&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj op undo  &lt;span style=&#34;color:#75715e&#34;&gt;# 撤銷任何操作&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj op restore  &lt;span style=&#34;color:#75715e&#34;&gt;# 恢復到任何時間點&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;不需要 &lt;code&gt;git reflog&lt;/code&gt;, 所有操作都可追溯和回復。&lt;/p&gt;
+&lt;h4 id=&#34;2-衝突處理的新思路&#34;&gt;2. 衝突處理的新思路&lt;/h4&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Jujutsu 讓你可以 commit 帶有衝突的狀態&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj new  &lt;span style=&#34;color:#75715e&#34;&gt;# 即使有衝突也能繼續開發&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj resolve  &lt;span style=&#34;color:#75715e&#34;&gt;# 稍後解決衝突&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h4 id=&#34;3-與-git-無縫協作&#34;&gt;3. 與 Git 無縫協作&lt;/h4&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Jujutsu 可以操作 Git repo&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj git clone &amp;lt;url&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj git push
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj git fetch
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 現有 Git repo 也能用 jj&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;cd my-git-repo
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj init --git-repo .
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id=&#34;為什麼-jujutsu-是個人效率工具的終極形態&#34;&gt;為什麼 Jujutsu 是個人效率工具的終極形態？&lt;/h2&gt;
+&lt;h3 id=&#34;心智模型更簡單&#34;&gt;心智模型更簡單&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Git&lt;/strong&gt;: Branch → Stage → Commit → Push → Rebase → Merge&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Jujutsu&lt;/strong&gt;: Change → Edit → Evolve&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;對於個人開發者來說, 這意味著更少的認知負擔, 更多的時間專注在實際問題上。&lt;/p&gt;
+&lt;h3 id=&#34;更安全的實驗&#34;&gt;更安全的實驗&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;所有操作都可以輕鬆撤銷&lt;/li&gt;
+&lt;li&gt;不需要擔心「搞壞」歷史&lt;/li&gt;
+&lt;li&gt;鼓勵更頻繁的實驗和重構&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;更適合現代個人工作流&#34;&gt;更適合現代個人工作流&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;Code Review 驅動的開發&lt;/li&gt;
+&lt;li&gt;頻繁的 Commit 修改&lt;/li&gt;
+&lt;li&gt;多個 PR 同時進行&lt;/li&gt;
+&lt;li&gt;不需要團隊統一工具 (可以單人使用 jj, 推送時轉為 Git)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;實戰案例用-jujutsu-管理-feature-stack&#34;&gt;實戰案例：用 Jujutsu 管理 Feature Stack&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 初始化&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj git clone https://github.com/user/repo.git
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;cd repo
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 創建第一個功能&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj new -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Add user authentication&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 開發...&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj describe -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Add login form and validation&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 基於此創建第二個功能&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj new -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Add user profile page&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 開發...&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 創建第三個功能&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj new -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Add profile editing&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 開發...&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 查看當前狀態&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj log
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 發現第一個功能需要修改&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj edit &amp;lt;auth-change-id&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 修改...&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj describe -m &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Updated authentication logic&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 自動處理後續依賴, 不需要手動 rebase!&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 推送到 GitHub&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;jj git push --change &amp;lt;change-id&amp;gt;  &lt;span style=&#34;color:#75715e&#34;&gt;# 為每個 change 推送對應分支&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;學習曲線&#34;&gt;學習曲線&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;現有 Git 用戶&lt;/strong&gt;: 可以繼續在 Git repo 中使用 &lt;code&gt;jj&lt;/code&gt;, 逐步適應&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;新專案&lt;/strong&gt;: 直接用 &lt;code&gt;jj git init&lt;/code&gt; 開始, 享受完整體驗&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;團隊協作&lt;/strong&gt;: 個人可以用 jj 提升效率, 推送時轉換為 Git, 不影響團隊其他成員&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;這是一個&lt;strong&gt;個人選擇&lt;/strong&gt;, 不需要說服整個團隊改變工作流程。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;結語效率工具的個人化旅程&#34;&gt;結語：效率工具的個人化旅程&lt;/h2&gt;
+&lt;p&gt;從 &lt;code&gt;git-revise&lt;/code&gt; 到 &lt;code&gt;git-branchstack&lt;/code&gt;, 再到 Jujutsu, 這是一段持續追求更高效率的旅程。每個工具都代表了開發者對「版本控制應該如何輔助我的工作」的不同思考。&lt;/p&gt;
+&lt;p&gt;這些工具的共同點是:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;它們都是&lt;strong&gt;個人效率工具&lt;/strong&gt;, 不需要整個團隊採用&lt;/li&gt;
+&lt;li&gt;它們都在挑戰 Git 的既有模式&lt;/li&gt;
+&lt;li&gt;它們都專注於減少摩擦, 讓開發者更專注於解決問題&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Jujutsu 的特別之處在於, 它不只是改善 Git 的某個面向, 而是重新思考了整個版本控制的心智模型。對於願意投資學習新工具來提升長期效率的開發者來說, 它可能是最佳選擇。&lt;/p&gt;
+&lt;p&gt;最重要的是: &lt;strong&gt;這是一個個人選擇&lt;/strong&gt;。你不需要等待團隊共識, 不需要說服所有人。如果 Git 的複雜性讓你感到疲憊, 如果你想要更流暢的開發體驗, 那就試試這些工具吧。&lt;/p&gt;
+&lt;p&gt;或許你會發現, 提升效率的關鍵不是更努力地使用現有工具, 而是找到更適合你的工具。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;延伸資源&#34;&gt;延伸資源&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://martinvonz.github.io/jj/&#34;&gt;Jujutsu 官方文檔&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://martinvonz.github.io/jj/latest/git-comparison/&#34;&gt;從 Git 遷移到 Jujutsu 指南&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://discord.gg/dkmfj3aGQN&#34;&gt;Jujutsu Discord 社群&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://steveklabnik.github.io/jujutsu-tutorial/&#34;&gt;Steve Klabnik 的 Jujutsu 教程&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;試試看,你可能再也回不去 Git 了! 🚀&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>版本控制的「柔術」🥋</title>
