@@ -364,7 +364,7 @@
 <ul>
 <li>需要在 commit message 中手動標記主題</li>
 <li>依賴關係的改變需要修改 commit message</li>
-<li>作者本人已轉向 Jujutsu (這說明了一些問題!)</li>
+<li>作者本人已轉向 Jujutsu (根據 <a href="https://github.com/krobelus/git-branchstack">git-branchstack README</a>, 作者表示 <a href="https://github.com/jj-vcs/jj">jj</a> 提供了更乾淨和強大的解決方案)</li>
 </ul>
 <hr>
 <h2 id="革命性轉變jujutsu-jj--重新定義個人版本控制體驗">革命性轉變：Jujutsu (jj) — 重新定義個人版本控制體驗</h2>
@@ -417,16 +417,34 @@
 </span></span><span style="display:flex;"><span><span style="color:#75715e"># 進行修改</span>
 </span></span><span style="display:flex;"><span>jj commit -m <span style="color:#e6db74">&#34;updated&#34;</span>  <span style="color:#75715e"># 自動更新該 change</span>
 </span></span></code></pre></div><h4 id="場景二管理多個功能開發">場景二：管理多個功能開發</h4>
-<p><strong>Git + branchstack 方式:</strong></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 開發 feature-A</span>
-</span></span><span style="display:flex;"><span>git commit -m <span style="color:#e6db74">&#34;[feature-A] A&#34;</span>
+<p><strong>傳統 Git 方式:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>git checkout -b feature-A
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 開發 feature-A</span>
+</span></span><span style="display:flex;"><span>git commit -m <span style="color:#e6db74">&#34;A&#34;</span>
 </span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>git checkout -b feature-B
 </span></span><span style="display:flex;"><span><span style="color:#75715e"># 開發 feature-B</span>
-</span></span><span style="display:flex;"><span>git commit -m <span style="color:#e6db74">&#34;[feature-B] B&#34;</span>
+</span></span><span style="display:flex;"><span>git commit -m <span style="color:#e6db74">&#34;B&#34;</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#75715e"># 要修改 A 時</span>
-</span></span><span style="display:flex;"><span>git commit -m <span style="color:#e6db74">&#34;[feature-A] Update A&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># 生成/更新分支用於 PR</span>
+</span></span><span style="display:flex;"><span>git checkout feature-A
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 修改</span>
+</span></span><span style="display:flex;"><span>git commit --amend
+</span></span><span style="display:flex;"><span>git checkout feature-B
+</span></span><span style="display:flex;"><span>git rebase feature-A  <span style="color:#75715e"># 手動 rebase</span>
+</span></span></code></pre></div><p><strong>git-branchstack 方式:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 所有工作在本地分支進行</span>
+</span></span><span style="display:flex;"><span>git commit -m <span style="color:#e6db74">&#34;[feature-A] Implement A&#34;</span>
+</span></span><span style="display:flex;"><span>git commit -m <span style="color:#e6db74">&#34;[feature-B:feature-A] Implement B&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 生成分支</span>
+</span></span><span style="display:flex;"><span>git branchstack
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 要修改 A 時</span>
+</span></span><span style="display:flex;"><span>git add modified_files
+</span></span><span style="display:flex;"><span>git revise &lt;commit-hash-of-A&gt;  <span style="color:#75715e"># 修改 A 的 commit</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 重新生成分支, 自動處理依賴</span>
 </span></span><span style="display:flex;"><span>git branchstack
 </span></span></code></pre></div><p><strong>Jujutsu 方式:</strong></p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 不需要建立 branch</span>
@@ -532,8 +550,9 @@
 <hr>
 <h2 id="延伸資源">延伸資源</h2>
 <ul>
-<li><a href="https://martinvonz.github.io/jj/">Jujutsu 官方文檔</a></li>
-<li><a href="https://martinvonz.github.io/jj/latest/git-comparison/">從 Git 遷移到 Jujutsu 指南</a></li>
+<li><a href="https://jj-vcs.github.io/jj/latest/">Jujutsu 官方文檔</a></li>
+<li><a href="https://github.com/jj-vcs/jj">Jujutsu GitHub Repository</a></li>
+<li><a href="https://jj-vcs.github.io/jj/latest/git-comparison/">從 Git 遷移到 Jujutsu 指南</a></li>
 <li><a href="https://discord.gg/dkmfj3aGQN">Jujutsu Discord 社群</a></li>
 <li><a href="https://steveklabnik.github.io/jujutsu-tutorial/">Steve Klabnik 的 Jujutsu 教程</a></li>
 </ul>
